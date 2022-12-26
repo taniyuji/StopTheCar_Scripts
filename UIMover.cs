@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-
+//壁描写前に表示される「HELP」のUIのアニメーションを制御するスクリプト
 public class UIMover : MonoBehaviour
 {
     [SerializeField]

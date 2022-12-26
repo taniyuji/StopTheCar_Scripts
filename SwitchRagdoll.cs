@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+//プレイヤーが車か壁とぶつかった際にプレイヤーの体をぐにゃぐにゃにして血を出すスクリプト
 public class SwitchRagdoll : MonoBehaviour
 {
     [SerializeField]
@@ -11,6 +12,7 @@ public class SwitchRagdoll : MonoBehaviour
     [SerializeField]
     private List<ParticleSystem> particles;
 
+    //吹き飛ぶ方向と距離
     [SerializeField]
     private Vector3 collideForce = new Vector3(-5, 50, -10);
 
@@ -19,7 +21,6 @@ public class SwitchRagdoll : MonoBehaviour
     private Animator animator;
 
     private Rigidbody parentRigidbody;
-    // Start is called before the first frame update
 
     void Awake()
     {
@@ -44,9 +45,12 @@ public class SwitchRagdoll : MonoBehaviour
             ragdollRigidBodies[i].isKinematic = true;
         }
     }
-
+    
+    //壁か車とぶつかったらragdollをオンにしてプレイヤーをaddForceで吹き飛ばし、血のエフェクトを全てオンにする
     void OnCollisionEnter(Collision collisionInfo)
     {
+        if(ResourceProvider.i.isGoal) return;
+
         if (collisionInfo.gameObject.CompareTag("Car") || collisionInfo.gameObject.CompareTag("Wall"))
         {
             if (!animator.enabled) return;

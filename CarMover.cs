@@ -4,21 +4,22 @@ using UnityEngine;
 using UniRx;
 using System;
 
+//車を動かすスクリプト
 public class CarMover : MonoBehaviour
 {
     [SerializeField]
     private float xSpeed;
 
     [SerializeField]
-    private float slowDownXSpeed;
+    private float slowDownXSpeed;//壁が描写されるまでスピードを落とす際の速さ
 
     private Rigidbody _rigidbody;
 
-    private Vector3 moveForce;
+    private Vector3 moveForce;//車をAddForceで横に動かす
 
-    private Vector3 slowDownSpeed;
+    private Vector3 slowDownSpeed;//減速する際の速さ
 
-    private Vector3 beforeVelocity;
+    private Vector3 beforeVelocity = Vector3.zero;//再び動かし始める時の速さを格納する変数
 
     private enum CarState
     {
@@ -29,8 +30,6 @@ public class CarMover : MonoBehaviour
 
     private CarState state = CarState.Moving;
 
-    private CollitionDetector collitionDetector;
-
     void Awake()
     {
         _rigidbody = GetComponent<Rigidbody>();
@@ -38,36 +37,47 @@ public class CarMover : MonoBehaviour
         moveForce = new Vector3(xSpeed, 0, 0);
 
         slowDownSpeed = new Vector3(slowDownXSpeed, 0, 0);
-
-        collitionDetector = GetComponent<CollitionDetector>();
     }
 
-    // Start is called before the first frame update
     void Start()
     {
+        //壁描写終了の通知受け取ったら再び動き出させる。既に壁かプレイヤーにぶつかっている場合は無効
         ResourceProvider.i.inputController.finishDraw.Subscribe(i =>
         {
+            if(state == CarState.Stop) return;
+            
             _rigidbody.velocity = beforeVelocity;
 
             state = CarState.Moving;
         });
+    }
 
-        collitionDetector.collide.Subscribe(i =>
+    void OnTriggerEnter(Collider other)
+    {
+        //減速判定用のコライダーと衝突したら減速する
+        if (other.gameObject.CompareTag("SpeedDown"))
         {
-            if (i == CollitionDetector.CollideObject.SpeedDown)
-            {
-                state = CarState.SlowDown;
+            if(beforeVelocity != Vector3.zero) return;
 
-                beforeVelocity = _rigidbody.velocity;
+            other.gameObject.SetActive(false);
 
-                _rigidbody.velocity = Vector3.zero;
-            }
-            else if (i == CollitionDetector.CollideObject.Wall
-                     || i == CollitionDetector.CollideObject.Character)
-            {
-                state = CarState.Stop;
-            }
-        });
+            state = CarState.SlowDown;
+
+            //再び動き出す際のスピードを格納
+            beforeVelocity = _rigidbody.velocity;
+
+            _rigidbody.velocity = Vector3.zero;
+        }
+    }
+
+    void OnCollisionEnter(Collision collisionInfo)
+    {
+        //壁かプレイヤーと衝突したら止める
+        if (collisionInfo.gameObject.CompareTag("Wall")
+                 || collisionInfo.gameObject.CompareTag("Character"))
+        {
+            state = CarState.Stop;
+        }
     }
 
     void FixedUpdate()
@@ -81,4 +91,6 @@ public class CarMover : MonoBehaviour
             _rigidbody.AddForce(moveForce);
         }
     }
+
+
 }

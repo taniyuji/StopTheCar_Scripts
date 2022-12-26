@@ -5,14 +5,8 @@ using UnityEngine.SceneManagement;
 
 public class ResetButton : MonoBehaviour
 {
-    [SerializeField]
-    private int sceneNumber;
-
-    void Update()
+    public void ResetScene()
     {
-        if(Input.GetKeyDown(KeyCode.Space))
-        {
-            SceneManager.LoadScene(sceneNumber);
-        }
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 }

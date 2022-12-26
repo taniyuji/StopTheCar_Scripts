@@ -14,6 +14,22 @@ public class ResourceProvider : MonoBehaviour
         get { return _inputController; }
     }
 
+    [SerializeField]
+    private CharacterAnimationController animationController;
+
+    public bool isGoal
+    {
+        get { return animationController.isGoal; }
+    }
+
+    [SerializeField]
+    private GameManager _gameManager;
+
+    public GameManager gameManager
+    {
+        get { return _gameManager; }
+    }
+
     void Awake()
     {
         i = this;

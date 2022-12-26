@@ -4,7 +4,7 @@ using UnityEngine;
 using UniRx;
 using System;
 
-//メッシュを生成させる InputManagerで使用
+//壁メッシュを生成させる InputManagerで使用
 public class LineDrawer_v2 : MonoBehaviour
 {
     [SerializeField]
@@ -67,64 +67,6 @@ public class LineDrawer_v2 : MonoBehaviour
         _rigidbody = meshObject.GetComponent<Rigidbody>();
     }
 
-    void Start()
-    {
-        GetComponent<InputController>().finishDraw.Subscribe(i =>
-        {
-            /*
-            meshFilter.sharedMesh = CreateWholeMesh();
-            meshRenderer.material = material;
-
-            meshRenderer.enabled = true;
-            */
-
-            colliderIndex = 0;
-
-            //_rigidbody.isKinematic = false;
-        });
-    }
-
-    Mesh CreateWholeMesh()
-    {
-        Mesh _mesh = new Mesh();
-        _mesh.vertices = this.vertices.ToArray();
-
-        _mesh.triangles = this.triangles.ToArray();
-        // _mesh.uv = GetUV();
-        _mesh.Optimize();
-
-        _mesh.RecalculateNormals();
-        _mesh.RecalculateBounds();
-        _mesh.RecalculateTangents();
-
-        return _mesh;
-    }
-
-    Vector2[] GetUV()
-    {
-        for (int i = 0; i < Mathf.CeilToInt((float)vertices.Count / (float)8); i++)
-        {
-            int k = i * 8;
-            uvs.Add(new Vector2(0, (float)k / (float)vertices.Count));
-            k++;
-            uvs.Add(new Vector2(1, (float)k / (float)vertices.Count));
-            k++;
-            uvs.Add(new Vector2(1, (float)k / (float)vertices.Count));
-            k++;
-            uvs.Add(new Vector2(0, (float)k / (float)vertices.Count));
-
-            k++;
-            uvs.Add(new Vector2(0, (float)k / (float)vertices.Count));
-            k++;
-            uvs.Add(new Vector2(1, (float)k / (float)vertices.Count));
-            k++;
-            uvs.Add(new Vector2(1, (float)k / (float)vertices.Count));
-            k++;
-            uvs.Add(new Vector2(0, (float)k / (float)vertices.Count));
-        }
-        return uvs.ToArray();
-    }
-
     //メッシュを作成するメソッド
     void CreateMesh()
     {
@@ -147,67 +89,21 @@ public class LineDrawer_v2 : MonoBehaviour
         Vector2 t1 = (Vector2)top - normal;//右上
         Vector2 p1 = (Vector2)prev - normal;//左上
 
-        //曲線をより滑らかに見せる方法
-        //1.メッシュ作成頻度を増やす
-        //2.ドローされた座標よりも若干ずらして前のメッシュと重なるようにする
-        //3.それぞれのメッシュの頂点が繋がるように頂点を計算する(難)
-        //ポリゴンの頂点座標を取得
-        //影の方線をうまく取得するには24この頂点が必要
-        Vector3[] _vertices = GetVertices(prev, top, normal, p0, p1, t0, t1);
+        // ポリゴンの頂点座標を取得し、リストに追加
+        vertices.AddRange(GetVertices(prev, top, normal, p0, p1, t0, t1));
 
-        // ポリゴンの頂点座標をリストに追加
-        for (int i = 0; i < _vertices.Length; i++)
-        {
-            this.vertices.Add(_vertices[i]);
-        }
-
-        //各ポリゴンの頂点座標にインデックス番号を割り当て
-        int[] _triangles =
-        {
-                offset, offset + 2, offset + 1,
-                offset, offset + 3, offset + 2,
-                offset + 5, offset + 4, offset + 7,
-                offset + 5, offset + 7, offset + 6,
-                offset + 8, offset + 10, offset + 9,
-                offset + 8, offset + 11, offset + 10,
-                offset + 12, offset + 14, offset + 13,
-                offset + 12, offset + 15, offset + 14,
-                offset + 16, offset + 18, offset + 17,
-                offset + 16, offset + 19, offset + 18,
-                offset + 20, offset + 22, offset + 21,
-                offset + 20, offset + 23, offset + 22,
-        };
-
-        //割り当てたインデックス番号をリストに追加
-        for (int i = 0; i < _triangles.Length; i++)
-        {
-            this.triangles.Add(_triangles[i]);
-        }
+        //ポリゴンを描写する際のインデックス番号を取得し、リストに追加
+        triangles.AddRange(GetTriangles());
 
         offset += 24;//インデックス番号の総計を更新
 
-        //メッシュに割り当て
-        mesh.vertices = this.vertices.ToArray();
-
-        mesh.triangles = this.triangles.ToArray();
-
-        mesh.Optimize();
-
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
-        mesh.RecalculateTangents();
-
-        meshFilter.sharedMesh = mesh;
-
-        meshRenderer.material = material;
-
-        meshRenderer.enabled = true;
+        ApplyMesh();
 
         SetColliderMesh(prev, top, p0, t0, t1, p1);
-
-        //SetDebugSpheres();
     }
 
+    //メッシュのポリゴン頂点のポジションを計算するメソッド
+    //影の方線をうまく取得するには24個の頂点が必要
     private Vector3[] GetVertices(Vector3 prev, Vector3 top, Vector2 normal, Vector2 p0, Vector2 p1, Vector2 t0, Vector2 t1)
     {
         Vector3[] vertices;
@@ -287,13 +183,53 @@ public class LineDrawer_v2 : MonoBehaviour
         return vertices;
     }
 
+    //各ポリゴンの頂点座標にインデックス番号を割り当てるメソッド
+    private int[] GetTriangles()
+    {
+        int[] _triangles =
+        {
+                offset, offset + 2, offset + 1,
+                offset, offset + 3, offset + 2,
+                offset + 5, offset + 4, offset + 7,
+                offset + 5, offset + 7, offset + 6,
+                offset + 8, offset + 10, offset + 9,
+                offset + 8, offset + 11, offset + 10,
+                offset + 12, offset + 14, offset + 13,
+                offset + 12, offset + 15, offset + 14,
+                offset + 16, offset + 18, offset + 17,
+                offset + 16, offset + 19, offset + 18,
+                offset + 20, offset + 22, offset + 21,
+                offset + 20, offset + 23, offset + 22,
+        };
+
+        return _triangles;
+    }
+
+    //メッシュ計算結果を対象のメッシュに割り当てる
+    private void ApplyMesh()
+    {
+        mesh.vertices = this.vertices.ToArray();
+
+        mesh.triangles = this.triangles.ToArray();
+
+        mesh.Optimize();
+
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        mesh.RecalculateTangents();
+
+        meshFilter.sharedMesh = mesh;
+
+        meshRenderer.material = material;
+
+        meshRenderer.enabled = true;
+    }
+
     //コライダー用のメッシュを生成
+    //meshColliderを1つだけ用意してconvexをonにすると超点数の関係で関係でコライダーの形がおかしくなるため、
+    //生成時の四角形メッシュ1つ1つにmeshColliderを適応させる
     private void SetColliderMesh(Vector3 prev, Vector3 top, Vector2 fv1, Vector2 fv2, Vector2 fv3, Vector2 fv4)
     {
-        //曲線をより滑らかに見せる方法
-        //1.メッシュ作成頻度を増やす
-        //2.ドローされた座標よりも若干ずらして前のメッシュと重なるようにする
-        //3.それぞれのメッシュの頂点が繋がるように頂点を計算する(難)
         //ポリゴンの頂点座標を取得
         Vector3[] _vertices =
         {

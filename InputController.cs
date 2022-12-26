@@ -4,14 +4,11 @@ using UnityEngine;
 using UniRx;
 using System;
 
-//マウスやタッチの入力を管理する
+//ゲーム中のマウスやタッチの入力を管理する
 public class InputController : MonoBehaviour
 {
     [SerializeField]
-    private float fixDegree;
-
-    [SerializeField]
-    private float maxScrollSpeed = 0.05f;
+    private float maxScrollSpeed = 0.05f;//マイフレーム処理させないことで処理を軽くさせる
 
     [SerializeField]
     private RectTransform handTransform;
@@ -30,9 +27,9 @@ public class InputController : MonoBehaviour
 
     private LineState state = LineState.CanDraw;
 
-    private Subject<bool> _finishDraw = new Subject<bool>();
+    private Subject<Unit> _finishDraw = new Subject<Unit>();
     //UniRxでプレイヤーが壁描写を終了したことを通知
-    public IObservable<bool> finishDraw
+    public IObservable<Unit> finishDraw
     {
         get { return _finishDraw; }
     }
@@ -50,6 +47,9 @@ public class InputController : MonoBehaviour
 
     void Update()
     {
+        //ゲームマネージャーがゲーム開始を判断するまで入力を受け付けない
+        if (ResourceProvider.i.gameManager.state == GameManager.GameState.Pause) return;
+
         if (state == LineState.Wait) return;
 
         StartCountInterval();
@@ -99,15 +99,16 @@ public class InputController : MonoBehaviour
         }
         else if (Input.GetMouseButtonUp(0))
         {
-            //ドラッグが終了したらUniRxで通知する
-            _finishDraw.OnNext(true);
+                //ドラッグが終了したらUniRxで通知する
+            _finishDraw.OnNext(Unit.Default);
 
             lineDrawer.PenUp();
 
-            if(handTransform != null) handTransform.gameObject.SetActive(false);
+            if (handTransform != null) handTransform.gameObject.SetActive(false);
         }
     }
 
+    //mousePositionをワールドポジションに変換し、描きたい奥行きを加算した上で返すメソッド
     private Vector3 CalculateTouchPoint()
     {
         var mousePosition = Input.mousePosition;
@@ -121,10 +122,9 @@ public class InputController : MonoBehaviour
 
         var screenPoint = Camera.main.ScreenToWorldPoint(mousePosition);
 
-        var fixTouch = new Vector3(screenPoint.x, screenPoint.y, transform.position.z) * Mathf.Sin(fixDegree * Mathf.Deg2Rad);
-
-        screenPoint = new Vector3(screenPoint.x - fixTouch.x,
-                                  screenPoint.y - fixTouch.y,
+        //このスクリプトがアタッチされたオブジェクトのzPositionで壁の奥行きを調整
+        screenPoint = new Vector3(screenPoint.x,
+                                  screenPoint.y,
                                   screenPoint.z + transform.position.z);
 
         return screenPoint;
